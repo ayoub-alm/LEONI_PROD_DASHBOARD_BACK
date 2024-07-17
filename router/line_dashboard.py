@@ -213,7 +213,7 @@ def productive_hours():
         temps_game = filters.get('temps_game', 0)
         start_time = filters.get('from')
         end_time = filters.get('to')
-
+        vsm = filters.get('vsm')
         if not start_time or not end_time:
             return jsonify({'error': 'start and end times are required'}), 400
 
@@ -238,12 +238,17 @@ def productive_hours():
         total_quantity = rows[0].total_quantity or 0
 
         # Calculate productive hours
-        productive_hours = (total_quantity * temps_game) / 54 if temps_game else 0
-
+        productive_hours = (total_quantity * temps_game) / vsm if temps_game else 0
+        efficiency = (total_quantity * temps_game) / (vsm * total_time) * 100
+        expected = (vsm * total_time) / temps_game
         conn.close()
 
-        return jsonify(
-            {'posted_hours': total_time, 'productive_hours': productive_hours, 'total_quantity': total_quantity})
+        return jsonify({'posted_hours': total_time,
+                        'productive_hours': productive_hours,
+                        'total_quantity': total_quantity,
+                        'efficiency': efficiency,
+                        'expected': expected
+                        })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500

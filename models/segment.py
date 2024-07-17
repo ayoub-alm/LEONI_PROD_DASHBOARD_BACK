@@ -8,7 +8,7 @@ class Segment(BaseModel, db.Model):
     name = db.Column(db.String(80), unique=True, nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     sum_of_hc_of_lines = db.Column(db.Integer, nullable=False)
-    production_lines = db.relationship('ProductionLine', backref='segment', lazy=True)
+    production_lines = db.relationship('ProductionLine', back_populates='segment', lazy=True)
     project = db.relationship('Project', back_populates='segments')
 
     def __init__(self, name, project_id, sum_of_hc_of_lines):
@@ -23,6 +23,6 @@ class Segment(BaseModel, db.Model):
             'name': self.name,
             'project_id': self.project_id,
             'sum_of_hc_of_lines': self.sum_of_hc_of_lines,
-            # 'project': self.project.to_dict() if self.project else None,
+            'project': self.project.to_dict() if self.project else None,
             # 'production_lines': [production_line.to_dict() for production_line in self.production_lines]
         }

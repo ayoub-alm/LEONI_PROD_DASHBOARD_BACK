@@ -1,7 +1,5 @@
 from database import db
 from models.base_model import BaseModel
-from models.project import Project
-
 
 class ProductionLine(BaseModel, db.Model):
     __tablename__ = 'production_lines'
@@ -10,7 +8,8 @@ class ProductionLine(BaseModel, db.Model):
     number_of_operators = db.Column(db.Integer, default=0)
     segment_id = db.Column(db.Integer, db.ForeignKey('segments.id'))
     database_path = db.Column(db.String(200), nullable=False)
-    # segment = db.relationship('Segment')
+    server_url = db.Column(db.String(200), nullable=True)
+    segment = db.relationship('Segment', back_populates='production_lines')
 
     def __init__(self, id, name, number_of_operators, segment_id):
         super().__init__()
@@ -23,7 +22,7 @@ class ProductionLine(BaseModel, db.Model):
         return {
             'id': self.id,
             'name': self.name,
-            'database_pth': self.database_path,
+            'database_path': self.database_path,
             'segment': self.segment.to_dict() if self.segment else None,
             'number_of_operators': self.number_of_operators,
         }

@@ -11,3 +11,8 @@ class SegmentService:
         segment = Segment
         segments = segment.query.all()
         return jsonify([sgm.to_dict() for sgm in segments])
+
+    @staticmethod
+    def get_segment_by_id(id):
+        segment = Segment.query.get(id)
+        return segment

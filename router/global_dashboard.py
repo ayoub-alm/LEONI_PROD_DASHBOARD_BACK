@@ -1,10 +1,12 @@
 from datetime import datetime
-
+import requests
 import pyodbc
 from flask import Blueprint, request, jsonify
 
-from models.production_line import ProductionLine
+from models.project import Project
 from services.production_line_service import ProductionLineService
+from services.segment_service import SegmentService
+from services.project_service import ProjectService
 
 global_dashboard_bp = Blueprint('global_dashboard_bp', __name__)
 
@@ -12,7 +14,7 @@ global_dashboard_bp = Blueprint('global_dashboard_bp', __name__)
 def get_db_connection(DBQ):
     conn = pyodbc.connect(
         r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
-        r'DBQ=' + DBQ + ';'
+        r'DBQ=./db.accdb;'
     )
     return conn
 
@@ -66,30 +68,67 @@ def get_total_fx():
         segment = filters.get('segment')
         line = filters.get('line')
 
-        if line != "" and segment != "":
+        if line and segment:
             selected_line = ProductionLineService.get_by_id(int(line))
-            # connect to path of database for the selected line
             try:
-                filters = request.json
-                conn = get_db_connection(selected_line.database_path)
-                cursor = conn.cursor()
-                query = 'SELECT SUM(Quantite) AS total_quantity FROM T_operations_validees'
-                params = []
-                query, params = apply_filters(query, params, filters)
-                cursor.execute(query, params)
-                row = cursor.fetchone()
-                conn.close()
-                return jsonify({'total_quantity': row.total_quantity})
-
+                headers = {
+                    'Content-Type': 'application/json'
+                }
+                response = requests.post(
+                    selected_line.server_url + '/api/line-dashboard/total-quantity',
+                    json=filters,
+                    headers=headers
+                )
+                data_from_server = response.json()
+                data_from_server['line'] = selected_line.to_dict()
+                return jsonify(data_from_server)
             except Exception as e:
                 return jsonify({'error': str(e)}), 500
-            return jsonify({"message": "Connected to line's database", "data": selected_line}), 200
-        elif line == "" and segment != "" and project != "":
-            # get all lines of segment data and perform query
-            return jsonify({"message": "Line is empty, segment is provided"}), 200
-        elif segment == "" and project != "":
-            # get data of all lines by project
-            return jsonify({"message": "Line is empty, segment is empty, project is provided "}), 200
 
+        elif not line and segment and project:
+            try:
+                selected_segment = SegmentService.get_segment_by_id(segment)
+                data = []
+                headers = {
+                    'Content-Type': 'application/json'
+                }
+                for line in selected_segment.production_lines:
+                    response = requests.post(
+                        line.server_url + '/api/line-dashboard/total-quantity',
+                        json=filters,
+                        headers=headers
+                    )
+                    data_from_server = response.json()
+                    data_from_server['line'] = line.to_dict()
+                    data.append(data_from_server)
+
+                return jsonify(data)
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
+
+        elif not segment and not line and project:
+            try:
+                headers = {
+                    'Content-Type': 'application/json'
+                }
+                data = []
+
+                selected_project = Project.query.get(project)
+
+                for segment in selected_project.segments:
+                    selected_segment = segment
+                    for line in selected_segment.production_lines:
+                        response = requests.post(
+                            line.server_url + '/api/line-dashboard/total-quantity',
+                            json=filters,
+                            headers=headers
+                        )
+                        data_from_server = response.json()
+                        data_from_server['line'] = line.to_dict()
+                        data.append(data_from_server)
+
+                return jsonify(data)
+            except Exception as e:
+                return jsonify({'error': str(e)}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500

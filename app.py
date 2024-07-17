@@ -37,8 +37,7 @@ def getCountOfRef():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT SUM(Quantite) AS sum FROM T_operations_validees where ',
-                       '04/12/2020 10:57')
+        cursor.execute('SELECT SUM(Quantite) AS sum FROM T_operations_validees')
         rows = cursor.fetchall()
         conn.close()
         return jsonify({'count': rows[0].sum})
